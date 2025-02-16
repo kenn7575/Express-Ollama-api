@@ -1,0 +1,46 @@
+
+
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    expose:
+      - "11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama pull llama3.2:3b
+        ollama serve
+
+  express-api:
+    build: ./api
+    container_name: express-api
+    depends_on:
+      - ollama
+    ports:
+      - "3000:3000"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    working_dir: /usr/src/app
+    command: ["node", "dist/index.js"]
+
+  test:
+    build: ./test
+    container_name: test
+    depends_on:
+      - express-api
+    environment:
+      - API_HOST=http://express-api:3000
+    volumes:
+      - ./test:/usr/src/test
+    working_dir: /usr/src/test
+    command: ["bash", "test.sh"]
+
+volumes:
+  ollama_data:
+  express_api_data:
